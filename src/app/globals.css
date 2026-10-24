@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #f6f3ec;
+  --paper-2: #efeadf;
+  --card: #fffdf8;
+  --ink: #16151b;
+  --ink-2: #4a4852;
+  --muted: #8a8690;
+  --line: #e2dccf;
+  --coral: #ff5a36;
+  --coral-soft: #ffe4dc;
+  --moss: #2f7a55;
+  --moss-soft: #e1f0e6;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-coral: var(--coral);
+  --color-coral-soft: var(--coral-soft);
+  --color-moss: var(--moss);
+  --color-moss-soft: var(--moss-soft);
+  --font-sans: var(--font-noto-sans), system-ui, sans-serif;
+  --font-serif: var(--font-noto-serif), serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+::selection {
+  background: var(--coral);
+  color: #fff;
+}
+
+/* 細緻的網格背景，用在 hero 區塊 */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(22 21 27 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(22 21 27 / 0.06) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* 面試官思考中的跳動圓點 */
+@keyframes typing {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-3px); }
+}
+.typing-dot {
+  animation: typing 1.2s infinite ease-in-out;
+}
+
+/* 新訊息進場動畫 */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-rise {
+  animation: rise 0.35s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .typing-dot, .animate-rise { animation: none; }
 }
