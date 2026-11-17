@@ -107,7 +107,10 @@ export function InterviewApp() {
         body: JSON.stringify({ jobDescription, totalQuestions, history: nextHistory }),
       });
       const data = await res.json();
-      if (res.status === 401) openApiKeySettings();
+      // 金鑰無效時打開設定視窗，並把原因顯示在視窗裡
+      if (res.status === 401) {
+        openApiKeySettings("你目前儲存的 API Key 被 OpenAI 拒絕了（可能打錯字、已被刪除或已撤銷），請輸入一把新的金鑰。");
+      }
       if (!res.ok) throw new Error(data.error ?? "發生錯誤");
 
       const result = data as InterviewResponse;
@@ -248,7 +251,7 @@ export function InterviewApp() {
               已設定 OpenAI API Key
               <button
                 type="button"
-                onClick={openApiKeySettings}
+                onClick={() => openApiKeySettings()}
                 className="ml-1 underline decoration-line underline-offset-4 hover:decoration-ink"
               >
                 變更
@@ -262,7 +265,7 @@ export function InterviewApp() {
               </p>
               <button
                 type="button"
-                onClick={openApiKeySettings}
+                onClick={() => openApiKeySettings()}
                 className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition-colors hover:bg-coral"
               >
                 設定 API Key

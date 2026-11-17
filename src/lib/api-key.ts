@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { API_KEY_HEADER, API_KEY_PATTERN } from "@/lib/interview";
 
 const STORAGE_KEY = "ai-interview:openai-api-key";
 const CHANGE_EVENT = "ai-interview:api-key-change";
@@ -56,13 +57,30 @@ export function useApiKey() {
   return useSyncExternalStore(subscribe, readApiKey, () => null);
 }
 
-export function openApiKeySettings() {
-  window.dispatchEvent(new Event(OPEN_SETTINGS_EVENT));
+// reason 會顯示在設定視窗上方，告訴使用者為什麼需要重新設定
+export function openApiKeySettings(reason?: string) {
+  window.dispatchEvent(new CustomEvent<string | undefined>(OPEN_SETTINGS_EVENT, { detail: reason }));
 }
 
-export function onOpenApiKeySettings(callback: () => void) {
-  window.addEventListener(OPEN_SETTINGS_EVENT, callback);
-  return () => window.removeEventListener(OPEN_SETTINGS_EVENT, callback);
+export function onOpenApiKeySettings(callback: (reason?: string) => void) {
+  const listener = (e: Event) => callback((e as CustomEvent<string | undefined>).detail);
+  window.addEventListener(OPEN_SETTINGS_EVENT, listener);
+  return () => window.removeEventListener(OPEN_SETTINGS_EVENT, listener);
+}
+
+// 向伺服器確認金鑰是否有效；回傳 null 代表有效，否則回傳錯誤訊息
+export async function verifyApiKey(key: string): Promise<string | null> {
+  try {
+    const res = await fetch("/api/verify-key", {
+      method: "POST",
+      headers: { [API_KEY_HEADER]: key },
+    });
+    if (res.ok) return null;
+    const data = await res.json().catch(() => ({}));
+    return data.error ?? "金鑰驗證失敗，請稍後再試。";
+  } catch {
+    return "無法連線到伺服器，請確認網路後再試。";
+  }
 }
 
 export function maskApiKey(key: string) {
@@ -70,5 +88,5 @@ export function maskApiKey(key: string) {
 }
 
 export function isLikelyOpenAIKey(key: string) {
-  return /^sk-[\w-]{16,}$/.test(key);
+  return API_KEY_PATTERN.test(key);
 }

@@ -8,6 +8,7 @@ import {
   onOpenApiKeySettings,
   saveApiKey,
   useApiKey,
+  verifyApiKey,
 } from "@/lib/api-key";
 
 function KeyIcon() {
@@ -27,11 +28,15 @@ export function ApiKeySettings() {
   const [draft, setDraft] = useState("");
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState("");
+  // 從其他頁面打開視窗時帶來的原因，例如「金鑰無效」
+  const [reason, setReason] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
-  function open() {
+  function open(openReason?: string) {
     setDraft("");
     setVisible(false);
     setError("");
+    setReason(openReason ?? "");
     dialogRef.current?.showModal();
     inputRef.current?.focus();
   }
@@ -43,14 +48,24 @@ export function ApiKeySettings() {
     dialogRef.current?.close();
   }
 
-  function handleSave(e: React.SubmitEvent<HTMLFormElement>) {
+  async function handleSave(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     const key = draft.trim();
     if (!isLikelyOpenAIKey(key)) {
       setError("格式看起來不正確，OpenAI API Key 通常以 sk- 開頭。");
       return;
     }
+    // 先向 OpenAI 確認金鑰有效才儲存
+    setVerifying(true);
+    setError("");
+    const verifyError = await verifyApiKey(key);
+    setVerifying(false);
+    if (verifyError) {
+      setError(verifyError);
+      return;
+    }
     saveApiKey(key);
+    setReason("");
     close();
   }
 
@@ -63,7 +78,7 @@ export function ApiKeySettings() {
     <>
       <button
         type="button"
-        onClick={open}
+        onClick={() => open()}
         className="flex items-center gap-2 rounded-full border border-line bg-card px-3 py-2 text-sm text-ink-2 transition-colors hover:border-ink hover:text-ink"
         aria-label={apiKey ? "API Key 已設定，開啟設定" : "尚未設定 API Key，開啟設定"}
       >
@@ -96,6 +111,15 @@ export function ApiKeySettings() {
             </button>
           </div>
 
+          {reason && (
+            <p
+              role="alert"
+              className="rounded-2xl border border-coral/30 bg-coral-soft px-4 py-3 text-sm leading-relaxed font-medium text-coral"
+            >
+              {reason}
+            </p>
+          )}
+
           <p className="text-sm leading-relaxed text-ink-2">
             本服務採用 BYOK（自備金鑰）模式：使用你自己的 OpenAI API Key 呼叫 AI，費用由 OpenAI 依用量直接向你計費。可到{" "}
             <a
@@ -111,13 +135,16 @@ export function ApiKeySettings() {
 
           <div
             className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-3 text-sm ${
-              apiKey ? "bg-moss-soft" : "bg-coral-soft"
+              apiKey && !reason ? "bg-moss-soft" : "bg-coral-soft"
             }`}
           >
             {apiKey ? (
               <>
                 <span className="flex flex-col gap-0.5">
-                  <span className="font-bold text-moss">已設定</span>
+                  {/* 帶著原因打開視窗時，代表目前的金鑰已被 OpenAI 拒絕 */}
+                  <span className={`font-bold ${reason ? "text-coral" : "text-moss"}`}>
+                    {reason ? "目前的金鑰無法使用" : "已設定"}
+                  </span>
                   <span className="font-mono text-xs text-ink-2">{maskApiKey(apiKey)}</span>
                 </span>
                 <button
@@ -147,6 +174,7 @@ export function ApiKeySettings() {
                   setDraft(e.target.value);
                   setError("");
                 }}
+                disabled={verifying}
                 placeholder="sk-..."
                 autoComplete="off"
                 spellCheck={false}
@@ -183,10 +211,10 @@ export function ApiKeySettings() {
             </button>
             <button
               type="submit"
-              disabled={!draft.trim()}
+              disabled={!draft.trim() || verifying}
               className="rounded-full bg-ink px-5 py-2.5 text-sm font-medium text-paper transition-colors hover:bg-coral disabled:opacity-40 disabled:hover:bg-ink"
             >
-              儲存
+              {verifying ? "驗證中…" : "驗證並儲存"}
             </button>
           </div>
         </form>

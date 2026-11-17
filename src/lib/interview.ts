@@ -4,6 +4,8 @@ export const MAX_QUESTIONS = 10;
 
 // 前端呼叫 API 時，用這個 header 帶上使用者自己的 OpenAI API Key（BYOK）
 export const API_KEY_HEADER = "x-openai-api-key";
+// API Key 的格式：sk- 開頭，後面接英數字、底線或連字號，長度上限避免濫用
+export const API_KEY_PATTERN = /^sk-[\w-]{16,256}$/;
 
 export type ChatMessage = {
   role: "interviewer" | "candidate";

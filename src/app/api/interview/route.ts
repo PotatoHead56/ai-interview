@@ -4,6 +4,8 @@ import OpenAI from "openai";
 import {
   // 前端帶 API Key 用的 header 名稱
   API_KEY_HEADER,
+  // API Key 的格式檢查規則
+  API_KEY_PATTERN,
   // 題數上限
   MAX_QUESTIONS,
   // 題數下限
@@ -27,8 +29,6 @@ const MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 const MAX_JD_LENGTH = 5000;
 // 每則對話訊息的最大字數
 const MAX_ANSWER_LENGTH = 3000;
-// API Key 的格式：sk- 開頭，後面接英數字、底線或連字號，長度上限避免濫用
-const API_KEY_PATTERN = /^sk-[\w-]{16,256}$/;
 
 // 單題點評的撰寫要求（出下一題與最終評分時共用）
 const REVIEW_INSTRUCTIONS = `請先針對候選人「剛剛回答的那一題」給出點評與參考解答。
