@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ApiKeySettings } from "@/components/api-key-settings";
 import { Logo } from "@/components/logo";
 
 const NAV_LINKS = [
@@ -19,12 +20,15 @@ export function SiteHeader() {
             </Link>
           ))}
         </nav>
-        <Link
-          href="/interview"
-          className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition-colors hover:bg-coral"
-        >
-          開始模擬面試
-        </Link>
+        <div className="flex items-center gap-2">
+          <ApiKeySettings />
+          <Link
+            href="/interview"
+            className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition-colors hover:bg-coral"
+          >
+            開始模擬面試
+          </Link>
+        </div>
       </div>
     </header>
   );

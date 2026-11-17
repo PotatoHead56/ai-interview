@@ -1,7 +1,9 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
+import { openApiKeySettings, useApiKey } from "@/lib/api-key";
 import {
+  API_KEY_HEADER,
   DEFAULT_QUESTIONS,
   MAX_QUESTIONS,
   MIN_QUESTIONS,
@@ -71,6 +73,7 @@ function ReviewCard({ index, review }: { index: number; review: QuestionReview }
 }
 
 export function InterviewApp() {
+  const apiKey = useApiKey();
   const [jobDescription, setJobDescription] = useState("");
   const [totalQuestions, setTotalQuestions] = useState(DEFAULT_QUESTIONS);
   const [history, setHistory] = useState<ChatMessage[]>([]);
@@ -91,15 +94,20 @@ export function InterviewApp() {
 
   // 回傳是否成功，讓呼叫端在失敗時可以還原狀態
   async function callInterview(nextHistory: ChatMessage[]): Promise<boolean> {
+    if (!apiKey) {
+      openApiKeySettings();
+      return false;
+    }
     setLoading(true);
     setError("");
     try {
       const res = await fetch("/api/interview", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", [API_KEY_HEADER]: apiKey },
         body: JSON.stringify({ jobDescription, totalQuestions, history: nextHistory }),
       });
       const data = await res.json();
+      if (res.status === 401) openApiKeySettings();
       if (!res.ok) throw new Error(data.error ?? "發生錯誤");
 
       const result = data as InterviewResponse;
@@ -234,11 +242,39 @@ export function InterviewApp() {
             </div>
           </div>
 
+          {apiKey ? (
+            <p className="flex items-center gap-2 text-sm text-ink-2">
+              <span className="h-2 w-2 rounded-full bg-moss" />
+              已設定 OpenAI API Key
+              <button
+                type="button"
+                onClick={openApiKeySettings}
+                className="ml-1 underline decoration-line underline-offset-4 hover:decoration-ink"
+              >
+                變更
+              </button>
+            </p>
+          ) : (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-coral-soft px-4 py-3">
+              <p className="text-sm">
+                <span className="font-bold text-coral">需要你的 OpenAI API Key</span>
+                <span className="block text-ink-2">金鑰只存在你的瀏覽器，用量由 OpenAI 直接計費。</span>
+              </p>
+              <button
+                type="button"
+                onClick={openApiKeySettings}
+                className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-paper transition-colors hover:bg-coral"
+              >
+                設定 API Key
+              </button>
+            </div>
+          )}
+
           {errorBanner}
 
           <button
             type="submit"
-            disabled={loading || !jobDescription.trim()}
+            disabled={loading || !jobDescription.trim() || !apiKey}
             className="rounded-full bg-coral px-6 py-4 font-medium text-white shadow-[0_10px_30px_-10px_var(--coral)] transition-all hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none"
           >
             {loading ? "面試官準備中…" : "開始面試"}

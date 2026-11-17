@@ -2,6 +2,8 @@
 import OpenAI from "openai";
 // 從共用模組匯入常數與型別（前後端共用，確保資料格式一致）
 import {
+  // 前端帶 API Key 用的 header 名稱
+  API_KEY_HEADER,
   // 題數上限
   MAX_QUESTIONS,
   // 題數下限
@@ -25,6 +27,8 @@ const MODEL = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
 const MAX_JD_LENGTH = 5000;
 // 每則對話訊息的最大字數
 const MAX_ANSWER_LENGTH = 3000;
+// API Key 的格式：sk- 開頭，後面接英數字、底線或連字號，長度上限避免濫用
+const API_KEY_PATTERN = /^sk-[\w-]{16,256}$/;
 
 // 單題點評的撰寫要求（出下一題與最終評分時共用）
 const REVIEW_INSTRUCTIONS = `請先針對候選人「剛剛回答的那一題」給出點評與參考解答。
@@ -97,10 +101,12 @@ function isValidRequest(body: unknown): body is InterviewRequest {
 
 // 處理 POST /api/interview 請求：出下一題（並點評上一題），或在答完所有題目後給出評分
 export async function POST(request: Request) {
-  // 若沒有設定 OpenAI 金鑰，直接回傳 500 錯誤
-  if (!process.env.OPENAI_API_KEY) {
-    // 回傳錯誤訊息與 HTTP 狀態碼 500
-    return Response.json({ error: "伺服器未設定 OPENAI_API_KEY" }, { status: 500 });
+  // BYOK：從請求 header 取出使用者自己的 OpenAI API Key（不使用伺服器的環境變數）
+  const apiKey = request.headers.get(API_KEY_HEADER)?.trim() ?? "";
+  // 沒帶金鑰或格式不對，回傳 401 請使用者到設定中輸入
+  if (!API_KEY_PATTERN.test(apiKey)) {
+    // 回傳錯誤訊息與 HTTP 狀態碼 401
+    return Response.json({ error: "請先在右上角「API Key」設定中輸入有效的 OpenAI API Key" }, { status: 401 });
   // if 結束
   }
 
@@ -117,8 +123,8 @@ export async function POST(request: Request) {
   const { jobDescription, totalQuestions, history } = body;
   // 計算候選人已經回答了幾題（= 候選人訊息的數量）
   const answered = history.filter((m) => m.role === "candidate").length;
-  // 建立 OpenAI 客戶端（會自動讀取環境變數 OPENAI_API_KEY）
-  const client = new OpenAI();
+  // 用使用者的金鑰建立 OpenAI 客戶端；金鑰只在這次請求中使用，不會被保存
+  const client = new OpenAI({ apiKey });
   // 每次呼叫模型都會用到的前置訊息：系統提示詞 + 目前為止的對話紀錄
   const baseMessages = [
     // 系統提示詞，設定面試官角色與規則
@@ -267,9 +273,21 @@ export async function POST(request: Request) {
     return Response.json(result);
   // 捕捉呼叫 OpenAI 或解析 JSON 時發生的錯誤
   } catch (error) {
-    // 在伺服器終端機印出錯誤，方便除錯
-    console.error("OpenAI request failed:", error);
-    // 回傳 502 錯誤給前端，不暴露內部細節
+    // 金鑰無效或已被撤銷
+    if (error instanceof OpenAI.AuthenticationError) {
+      // 回傳 401，請使用者檢查金鑰
+      return Response.json({ error: "OpenAI API Key 無效，請到右上角「API Key」設定中確認" }, { status: 401 });
+    // if 結束
+    }
+    // 額度用完或請求太頻繁
+    if (error instanceof OpenAI.RateLimitError) {
+      // 回傳 429，提醒使用者檢查 OpenAI 帳戶額度
+      return Response.json({ error: "OpenAI 額度不足或請求太頻繁，請確認帳戶餘額後再試" }, { status: 429 });
+    // if 結束
+    }
+    // 只印出錯誤名稱與狀態碼，避免把錯誤訊息中的金鑰片段寫進伺服器紀錄
+    console.error("OpenAI request failed:", error instanceof OpenAI.APIError ? `${error.name} ${error.status}` : error);
+    // 其他錯誤回傳 502 給前端，不暴露內部細節
     return Response.json({ error: "AI 服務暫時無法使用，請稍後再試" }, { status: 502 });
   // try/catch 結束
   }

@@ -47,7 +47,11 @@ const STEPS = [
 const FAQS = [
   {
     q: "需要註冊或付費嗎？",
-    a: "不需要。打開就能開始模擬面試，沒有帳號、也不用綁定任何資料。",
+    a: "不需要註冊，本服務也不收費。我們採用 BYOK（自備金鑰）模式：在右上角「API Key」設定中輸入你自己的 OpenAI API Key，AI 用量由 OpenAI 直接向你計費。",
+  },
+  {
+    q: "我的 API Key 安全嗎？",
+    a: "金鑰只儲存在你瀏覽器的 localStorage，不會存到我們的伺服器。每次面試請求時才會帶上金鑰，由伺服器轉交 OpenAI 使用後即丟棄。在公用電腦上使用後，記得到設定中清除金鑰。",
   },
   {
     q: "我的回答會被保存嗎？",
@@ -154,7 +158,7 @@ export default function LandingPage() {
                 看看怎麼運作
               </Link>
             </div>
-            <p className="font-mono text-xs text-muted">無需註冊 · 不保存紀錄 · 1–10 題自由設定</p>
+            <p className="font-mono text-xs text-muted">無需註冊 · 自備 OpenAI API Key · 1–10 題自由設定</p>
           </div>
           <HeroPreview />
         </div>
